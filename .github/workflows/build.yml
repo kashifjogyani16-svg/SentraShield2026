@@ -24,43 +24,41 @@ jobs:
 
       - name: Build APK
         run: |
-          # 🔑 Yahan full path set kar rahe hain
           BT=$ANDROID_HOME/build-tools/34.0.0
           PLATFORM=$ANDROID_HOME/platforms/android-34/android.jar
-          
-          echo "Build Tools: $BT"
-          ls $BT
-          
           mkdir -p build
-          
-          # 1. Resources compile karein (R.java banayein)
+
           $BT/aapt package -f -m -J app/src/main/java \
             -M app/src/main/AndroidManifest.xml \
             -S app/src/main/res -I $PLATFORM
-          
-          # 2. Java code compile karein
+
           javac -d build -cp $PLATFORM \
             app/src/main/java/com/sentra/shield/*.java \
             app/src/main/java/com/sentra/shield/R.java
-          
-          # 3. Class files ko DEX mein convert karein
+
           $BT/d8 --output build build/com/sentra/shield/*.class
-          
-          # 4. APK pack karein
+
           $BT/aapt package -f -M app/src/main/AndroidManifest.xml \
             -S app/src/main/res -I $PLATFORM -F build/unsigned.apk
-          
-          # 5. DEX file APK mein add karein
+
           cd build && $BT/aapt add unsigned.apk classes.dex && cd ..
 
-      - name: Sign APK
+      - name: Sign APK (v1 + v2)
         run: |
           BT=$ANDROID_HOME/build-tools/34.0.0
           keytool -genkey -v -keystore build/key.jks -alias key -keyalg RSA \
             -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 \
             -dname "CN=Test"
+
+          # Zipalign zaroori hai (install fail hone ki badi wajah)
+          $BT/zipalign -v 4 build/unsigned.apk build/aligned.apk
+
           $BT/apksigner sign --ks build/key.jks --ks-pass pass:123456 \
-            --out build/SentraShield.apk build/unsigned.apk
+            --v1-signing-enabled true --v2-signing-enabled true \
+            --out build/SentraShield.apk build/aligned.apk
+
+          # Verify karein
+          $BT/apksigner verify build/SentraShield.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
