@@ -5,24 +5,24 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.view.*
 import android.view.animation.OvershootInterpolator
-import android.widget.FrameLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.core.app.NotificationCompat
 import com.sentra.shield.R
-import com.sentra.shield.ui.components.WaterWaveView
 
 class WaterIslandService : Service() {
     private lateinit var windowManager: WindowManager
     private var islandView: View? = null
-    private var wave: WaterWaveView? = null
+    private var buddyView: ImageView? = null
+    private var listContainer: LinearLayout? = null
     private val handler = Handler(Looper.getMainLooper())
-    private var isExpanded = false
+    private var isListVisible = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -30,9 +30,7 @@ class WaterIslandService : Service() {
         super.onCreate()
         startForeground(1002, buildNotification())
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        addIslandView()
-        // Auto show test alert after 1 second
-        handler.postDelayed({ showAlert(30, "SentraShield Active") }, 1000)
+        addBuddyView()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -44,8 +42,8 @@ class WaterIslandService : Service() {
         return START_STICKY
     }
 
-    private fun addIslandView() {
-        // WindowManager LayoutParams
+    private fun addBuddyView() {
+        val density = resources.displayMetrics.density
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -62,73 +60,111 @@ class WaterIslandService : Service() {
         params.y = getNotchOffset()
 
         // Container
-        val density = resources.displayMetrics.density
-        val container = FrameLayout(this)
-        val size = (48 * density).toInt()
-        
-        wave = WaterWaveView(this)
-        container.addView(wave, FrameLayout.LayoutParams(size, size))
-        
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
+        // Buddy emoji
+        buddyView = ImageView(this).apply {
+            setImageResource(R.drawable.ic_buddy)
+            val size = (48 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(size, size)
+            setOnClickListener {
+                if (isListVisible) hideList() else showList()
+            }
+        }
+        container.addView(buddyView)
+
+        // List popup (initially hidden)
+        listContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setBackgroundColor(Color.parseColor("#EE0B0F14"))
+            setPadding(24, 24, 24, 24)
+            val lp = LinearLayout.LayoutParams(
+                (220 * density).toInt(),
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.topMargin = (8 * density).toInt()
+            layoutParams = lp
+        }
+        container.addView(listContainer)
+
         islandView = container
         windowManager.addView(container, params)
     }
 
     private fun getNotchOffset(): Int {
         val density = resources.displayMetrics.density
-        val default = (36 * density).toInt()
-        
+        val default = (8 * density).toInt()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val cutout = windowManager.defaultDisplay.cutout
             val safeInset = cutout?.safeInsetTop ?: 0
-            if (safeInset > 0) {
-                safeInset - (8 * density).toInt()
-            } else {
-                default
-            }
-        } else {
-            default
+            if (safeInset > 0) safeInset - (4 * density).toInt() else default
+        } else default
+    }
+
+    private fun showList() {
+        isListVisible = true
+        listContainer?.removeAllViews()
+        listContainer?.visibility = View.VISIBLE
+
+        // Pop animation
+        listContainer?.scaleX = 0.7f
+        listContainer?.scaleY = 0.7f
+        listContainer?.animate()?.scaleX(1f)?.scaleY(1f)
+            ?.setInterpolator(OvershootInterpolator(1.2f))
+            ?.setDuration(300)?.start()
+
+        // Title
+        val title = TextView(this).apply {
+            text = "SentraBuddy"
+            setTextColor(Color.parseColor("#00B4D8"))
+            textSize = 14f
+            setPadding(0, 0, 0, 12)
         }
+        listContainer?.addView(title)
+
+        // Sample list items (baad mein database se aayenge)
+        val items = listOf(
+            "🟢 System Safe",
+            "📱 42 apps monitored",
+            "⚠️ 2 suspicious apps",
+            "🛡️ Antivirus active"
+        )
+        items.forEach { item ->
+            val tv = TextView(this).apply {
+                text = item
+                setTextColor(Color.WHITE)
+                textSize = 12f
+                setPadding(0, 8, 0, 8)
+            }
+            listContainer?.addView(tv)
+        }
+    }
+
+    private fun hideList() {
+        isListVisible = false
+        listContainer?.animate()?.scaleX(0.7f)?.scaleY(0.7f)
+            ?.setDuration(200)
+            ?.withEndAction { listContainer?.visibility = View.GONE }
+            ?.start()
     }
 
     private fun showAlert(score: Int, title: String) {
         val color = when {
-            score >= 70 -> Color.parseColor("#FF5252") // Red
-            score >= 50 -> Color.parseColor("#FFB300") // Orange
-            score >= 30 -> Color.parseColor("#00B4D8") // Blue
-            else -> Color.parseColor("#00E676") // Green
+            score >= 70 -> Color.parseColor("#FF5252")
+            score >= 50 -> Color.parseColor("#FFB300")
+            score >= 30 -> Color.parseColor("#00B4D8")
+            else -> Color.parseColor("#00E676")
         }
-        wave?.setWaterColor(color)
-        expand()
-    }
-
-    private fun expand() {
-        if (isExpanded) return
-        isExpanded = true
-        
-        // Scale from 0.7 to 1.0 with bounce
-        islandView?.scaleX = 0.7f
-        islandView?.scaleY = 0.7f
-        
-        islandView?.animate()
-            ?.scaleX(1.0f)
-            ?.scaleY(1.0f)
-            ?.setInterpolator(OvershootInterpolator(1.2f))
-            ?.setDuration(400)
-            ?.start()
-        
-        // Auto collapse after 4 seconds
-        handler.postDelayed({ collapse() }, 4000)
-    }
-
-    private fun collapse() {
-        if (!isExpanded) return
-        isExpanded = false
-        
-        islandView?.animate()
-            ?.scaleX(0.7f)
-            ?.scaleY(0.7f)
-            ?.setDuration(300)
-            ?.start()
+        // Buddy par pulse animation
+        buddyView?.animate()?.scaleX(1.3f)?.scaleY(1.3f)?.setDuration(200)
+            ?.withEndAction {
+                buddyView?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(200)?.start()
+            }?.start()
+        showList()
     }
 
     private fun buildNotification(): Notification {
@@ -138,8 +174,8 @@ class WaterIslandService : Service() {
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(ch)
         }
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("SentraShield Island")
-            .setContentText("Dynamic Island active")
+            .setContentTitle("SentraShield Buddy")
+            .setContentText("Buddy is active")
             .setSmallIcon(R.drawable.ic_shield)
             .setOngoing(true)
             .build()
@@ -147,9 +183,7 @@ class WaterIslandService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        islandView?.let { 
-            try { windowManager.removeView(it) } catch (e: Exception) { }
-        }
+        islandView?.let { try { windowManager.removeView(it) } catch (e: Exception) {} }
         super.onDestroy()
     }
 
@@ -164,7 +198,7 @@ class WaterIslandService : Service() {
                 context.startForegroundService(intent)
             else context.startService(intent)
         }
-        
+
         fun start(context: Context) {
             val intent = Intent(context, WaterIslandService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)

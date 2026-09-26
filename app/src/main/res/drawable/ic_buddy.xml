@@ -1,0 +1,50 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Body (green shield-like blob) -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M50,10 C30,10 20,25 20,45 C20,65 30,80 50,80 C70,80 80,65 80,45 C80,25 70,10 50,10 Z"/>
+
+    <!-- Eyes (white) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M40,40 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M60,40 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
+
+    <!-- Pupils (black) -->
+    <path android:fillColor="#000000"
+        android:pathData="M40,40 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+    <path android:fillColor="#000000"
+        android:pathData="M60,40 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+
+    <!-- Smile -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M40,55 Q50,65 60,55"/>
+
+    <!-- Left hand -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M20,45 Q5,40 8,30 Q10,25 15,28 Q20,32 22,40 Z"/>
+
+    <!-- Right hand -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M80,45 Q95,40 92,30 Q90,25 85,28 Q80,32 78,40 Z"/>
+
+    <!-- Left leg -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M40,78 Q38,90 35,92 Q30,92 32,85 Q35,80 40,78 Z"/>
+
+    <!-- Right leg -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M60,78 Q62,90 65,92 Q70,92 68,85 Q65,80 60,78 Z"/>
+</vector>
