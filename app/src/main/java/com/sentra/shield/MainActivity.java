@@ -1,21 +1,26 @@
 package com.sentra.shield;
 
-import android.app.*;
-import android.content.*;
-import android.os.*;
-import android.view.*;
-import android.widget.*;
-import androidx.core.app.NotificationCompat;
-import java.util.*;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.util.List;
 
 public class MainActivity extends Activity {
 
     TextView emojiView, statusText;
     LinearLayout recentContainer;
     private static final int NOTIF_ID = 1001;
-
-    // 🔑 Apni Gemini API key yahan daalein
-    private static final String GEMINI_API_KEY = "YOUR_API_KEY_HERE";
 
     @Override
     protected void onCreate(Bundle b) {
@@ -28,22 +33,14 @@ public class MainActivity extends Activity {
         View ringView = findViewById(R.id.ringView);
         View cameraIcon = findViewById(R.id.cameraIcon);
 
-        // Status ke hisaab se emoji
         setEmoji("safe");
 
-        // Camera ring click (camera NA khule)
         ringView.setOnClickListener(v -> showDynamicIsland());
         cameraIcon.setOnClickListener(v -> showDynamicIsland());
 
-        // Recent apps list (scrolling)
         loadRecentApps();
-
-        // Notification (sirf ek baar)
         createNotificationChannel();
         sendNotification();
-
-        // ✅ Gemini 404 fix - v1beta + gemini-1.5-flash
-        callGemini();
     }
 
     private void setEmoji(String status) {
@@ -94,14 +91,15 @@ public class MainActivity extends Activity {
         PendingIntent pi = PendingIntent.getActivity(this, 0, i,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        NotificationCompat.Builder nb = new NotificationCompat.Builder(this, "sentra_ch")
+        android.app.Notification.Builder nb = new android.app.Notification.Builder(this, "sentra_ch")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("SentraShield")
             .setContentText("🥳 System Safe - 2 suspicious apps")
             .setContentIntent(pi)
             .setAutoCancel(true);
 
-        NotificationManagerCompat.from(this).notify(NOTIF_ID, nb.build());
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(NOTIF_ID, nb.build());
     }
 
     @Override
@@ -110,33 +108,5 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra("show_status", false)) {
             showDynamicIsland();
         }
-    }
-
-    // ✅ GEMINI API CALL (404 FIX)
-    private void callGemini() {
-        new Thread(() -> {
-            try {
-                java.net.URL url = new java.net.URL(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-
-                String body = "{\"contents\":[{\"parts\":[{\"text\":\"Hello\"}]}]}";
-                conn.getOutputStream().write(body.getBytes());
-
-                int code = conn.getResponseCode();
-                runOnUiThread(() -> {
-                    if (code == 200) {
-                        statusText.setText("🟢 System Safe | Gemini: OK");
-                    } else {
-                        statusText.setText("⚠️ Gemini Error: " + code);
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> statusText.setText("Error: " + e.getMessage()));
-            }
-        }).start();
     }
 }
