@@ -5,7 +5,6 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <!-- Soft glow sits behind both states -->
     <View
         android:id="@+id/islandGlow"
         android:layout_width="72dp"
@@ -13,7 +12,6 @@
         android:layout_gravity="center"
         android:background="@drawable/bg_water_glow" />
 
-    <!-- COLLAPSED STATE: small circular water drop -->
     <FrameLayout
         android:id="@+id/collapsedContainer"
         android:layout_width="44dp"
@@ -30,7 +28,6 @@
 
     </FrameLayout>
 
-    <!-- EXPANDED STATE: horizontal pill with icon, text, status dot -->
     <LinearLayout
         android:id="@+id/expandedContainer"
         android:layout_width="240dp"
