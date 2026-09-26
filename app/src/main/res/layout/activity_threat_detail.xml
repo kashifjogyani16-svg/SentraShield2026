@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B0F14"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="App Name"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvPackage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Package"
+            android:textColor="#9E9E9E"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1E1E1E"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvRisk"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Risk Score: 0/100"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvReason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reason"
+            android:textColor="#E0E0E0"
+            android:textSize="15sp"
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:id="@+id/tvData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Data usage"
+            android:textColor="#00E5FF"
+            android:textSize="15sp"
+            android:layout_marginTop="20dp"
+            android:background="#1E1E1E"
+            android:padding="16dp"/>
+
+    </LinearLayout>
+</ScrollView>
