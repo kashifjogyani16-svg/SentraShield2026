@@ -40,7 +40,8 @@ class MonitorService : Service() {
             val usage = NetworkStatsUtil.getUsage(this, app.packageName)
             val label = pm.getApplicationLabel(app).toString()
             
-            db.appUsageDao().insert(
+            // Yahan humne insertUsage use kiya hai
+            db.appUsageDao().insertUsage(
                 AppUsageEntity(app.packageName, label, usage.first, usage.second)
             )
             
@@ -53,7 +54,6 @@ class MonitorService : Service() {
                         reason = result.reasons.joinToString(", ")
                     )
                 )
-                // Yahan hum WaterIslandService ka companion function call kar rahe hain
                 WaterIslandService.showAlert(
                     this, 
                     app.packageName, 

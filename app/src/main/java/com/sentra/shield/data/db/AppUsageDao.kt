@@ -9,19 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppUsageDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(usage: AppUsageEntity)
+    suspend fun insertUsage(entity: AppUsageEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(usages: List<AppUsageEntity>)
-
-    @Query("SELECT * FROM app_usage ORDER BY (rxBytes + txBytes) DESC")
-    fun observeAll(): Flow<List<AppUsageEntity>>
-
-    @Query("SELECT * FROM app_usage WHERE packageName = :packageName LIMIT 1")
-    suspend fun getForPackage(packageName: String): AppUsageEntity?
-
-    @Query("DELETE FROM app_usage")
-    suspend fun clearAll()
+    @Query("SELECT * FROM app_usage ORDER BY rxBytes DESC")
+    fun getAllUsage(): Flow<List<AppUsageEntity>>
 }
