@@ -19,49 +19,15 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: 'platforms;android-34 build-tools;34.0.0'
 
-      - name: Build APK
-        run: |
-          BT=$ANDROID_HOME/build-tools/34.0.0
-          PLATFORM=$ANDROID_HOME/platforms/android-34/android.jar
-          mkdir -p build
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-          $BT/aapt package -f -m -J app/src/main/java \
-            -M app/src/main/AndroidManifest.xml \
-            -S app/src/main/res -I $PLATFORM
-
-          javac -d build -cp $PLATFORM \
-            app/src/main/java/com/sentra/shield/*.java \
-            app/src/main/java/com/sentra/shield/R.java
-
-          $BT/d8 --output build build/com/sentra/shield/*.class
-
-          $BT/aapt package -f -M app/src/main/AndroidManifest.xml \
-            -S app/src/main/res -I $PLATFORM -F build/unsigned.apk
-
-          cd build && $BT/aapt add unsigned.apk classes.dex && cd ..
-
-      - name: Sign APK (v1 + v2)
-        run: |
-          BT=$ANDROID_HOME/build-tools/34.0.0
-          keytool -genkey -v -keystore build/key.jks -alias key -keyalg RSA \
-            -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 \
-            -dname "CN=Test"
-
-          # Zipalign zaroori hai (install fail hone ki badi wajah)
-          $BT/zipalign -v 4 build/unsigned.apk build/aligned.apk
-
-          $BT/apksigner sign --ks build/key.jks --ks-pass pass:123456 \
-            --v1-signing-enabled true --v2-signing-enabled true \
-            --out build/SentraShield.apk build/aligned.apk
-
-          # Verify karein
-          $BT/apksigner verify build/SentraShield.apk
+      - name: Build APK with Gradle
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SentraShield-APK
-          path: build/SentraShield.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
