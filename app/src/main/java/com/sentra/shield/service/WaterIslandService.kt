@@ -12,6 +12,7 @@ import android.os.Looper
 import android.view.*
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.sentra.shield.R
 import com.sentra.shield.ui.components.WaterWaveView
@@ -21,6 +22,7 @@ class WaterIslandService : Service() {
     private var islandView: View? = null
     private var wave: WaterWaveView? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var isExpanded = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -29,6 +31,8 @@ class WaterIslandService : Service() {
         startForeground(1002, buildNotification())
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         addIslandView()
+        // Auto show test alert after 1 second
+        handler.postDelayed({ showAlert(30, "SentraShield Active") }, 1000)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -41,6 +45,7 @@ class WaterIslandService : Service() {
     }
 
     private fun addIslandView() {
+        // WindowManager LayoutParams
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -49,48 +54,81 @@ class WaterIslandService : Service() {
             else WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         params.y = getNotchOffset()
 
+        // Container
         val density = resources.displayMetrics.density
         val container = FrameLayout(this)
-        val size = (44 * density).toInt()
+        val size = (48 * density).toInt()
+        
         wave = WaterWaveView(this)
         container.addView(wave, FrameLayout.LayoutParams(size, size))
+        
         islandView = container
         windowManager.addView(container, params)
     }
 
     private fun getNotchOffset(): Int {
-        val default = (30 * resources.displayMetrics.density).toInt()
+        val density = resources.displayMetrics.density
+        val default = (36 * density).toInt()
+        
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val cutout = windowManager.defaultDisplay.cutout
-            cutout?.safeInsetTop?.takeIf { it > 0 }?.minus((8 * resources.displayMetrics.density).toInt()) ?: default
-        } else default
+            val safeInset = cutout?.safeInsetTop ?: 0
+            if (safeInset > 0) {
+                safeInset - (8 * density).toInt()
+            } else {
+                default
+            }
+        } else {
+            default
+        }
     }
 
     private fun showAlert(score: Int, title: String) {
         val color = when {
-            score >= 70 -> Color.parseColor("#FF5252")
-            score >= 50 -> Color.parseColor("#FFB300")
-            score >= 30 -> Color.parseColor("#00B4D8")
-            else -> Color.parseColor("#00E676")
+            score >= 70 -> Color.parseColor("#FF5252") // Red
+            score >= 50 -> Color.parseColor("#FFB300") // Orange
+            score >= 30 -> Color.parseColor("#00B4D8") // Blue
+            else -> Color.parseColor("#00E676") // Green
         }
         wave?.setWaterColor(color)
         expand()
     }
 
     private fun expand() {
-        islandView?.animate()?.scaleX(1f)?.scaleY(1f)
-            ?.setInterpolator(OvershootInterpolator(1.2f))?.setDuration(300)?.start()
+        if (isExpanded) return
+        isExpanded = true
+        
+        // Scale from 0.7 to 1.0 with bounce
+        islandView?.scaleX = 0.7f
+        islandView?.scaleY = 0.7f
+        
+        islandView?.animate()
+            ?.scaleX(1.0f)
+            ?.scaleY(1.0f)
+            ?.setInterpolator(OvershootInterpolator(1.2f))
+            ?.setDuration(400)
+            ?.start()
+        
+        // Auto collapse after 4 seconds
         handler.postDelayed({ collapse() }, 4000)
     }
 
     private fun collapse() {
-        islandView?.animate()?.scaleX(0.7f)?.scaleY(0.7f)?.setDuration(250)?.start()
+        if (!isExpanded) return
+        isExpanded = false
+        
+        islandView?.animate()
+            ?.scaleX(0.7f)
+            ?.scaleY(0.7f)
+            ?.setDuration(300)
+            ?.start()
     }
 
     private fun buildNotification(): Notification {
@@ -101,13 +139,17 @@ class WaterIslandService : Service() {
         }
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("SentraShield Island")
+            .setContentText("Dynamic Island active")
             .setSmallIcon(R.drawable.ic_shield)
             .setOngoing(true)
             .build()
     }
 
     override fun onDestroy() {
-        islandView?.let { windowManager.removeView(it) }
+        handler.removeCallbacksAndMessages(null)
+        islandView?.let { 
+            try { windowManager.removeView(it) } catch (e: Exception) { }
+        }
         super.onDestroy()
     }
 
@@ -118,6 +160,13 @@ class WaterIslandService : Service() {
             intent.putExtra("title", title)
             intent.putExtra("subtitle", subtitle)
             intent.putExtra("score", score)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                context.startForegroundService(intent)
+            else context.startService(intent)
+        }
+        
+        fun start(context: Context) {
+            val intent = Intent(context, WaterIslandService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 context.startForegroundService(intent)
             else context.startService(intent)

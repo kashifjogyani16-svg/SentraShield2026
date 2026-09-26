@@ -12,20 +12,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.sentra.shield.data.db.SentraDatabase
-import com.sentra.shield.data.db.entity.AppUsageEntity
 import com.sentra.shield.service.MonitorService
 import com.sentra.shield.service.WaterIslandService
+import com.sentra.shield.util.ActivityTracker
+import com.sentra.shield.util.GeminiAnalyzer
 import com.sentra.shield.util.PermissionUtil
+import com.sentra.shield.util.VirusTotalChecker
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var monitoring by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf("") }
     
-    // Database se data fetch karne ke liye
     val db = remember { SentraDatabase.getInstance(context) }
     val appUsageList by db.appUsageDao().getAllUsage().collectAsState(initial = emptyList())
+    val threatLogs by db.threatLogDao().getAllLogs().collectAsState(initial = emptyList())
+    val hasUsageAccess = remember { ActivityTracker.hasUsageAccess(context) }
 
     Scaffold(
         topBar = {
@@ -41,6 +47,7 @@ fun DashboardScreen() {
             modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Monitoring
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Monitoring Status", style = MaterialTheme.typography.titleMedium)
@@ -59,44 +66,121 @@ fun DashboardScreen() {
                 }
             }
 
+            // Dynamic Island
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Overlay Permission", style = MaterialTheme.typography.titleMedium)
+                    Text("Dynamic Island", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = {
-                        if (!PermissionUtil.canDrawOverlay(context)) PermissionUtil.requestOverlay(context)
-                        else {
-                            val i = Intent(context, WaterIslandService::class.java)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                                context.startForegroundService(i)
-                            else context.startService(i)
-                        }
-                    }) { Text("Enable Dynamic Island") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            if (!PermissionUtil.canDrawOverlay(context)) {
+                                PermissionUtil.requestOverlay(context)
+                            } else {
+                                WaterIslandService.start(context)
+                            }
+                        }) { Text("Start Island") }
+                        
+                        Button(onClick = {
+                            WaterIslandService.showAlert(context, "test", "Test Alert", "Testing", 70)
+                        }) { Text("Test Alert") }
+                    }
                 }
             }
 
-            Text("Monitored Apps", style = MaterialTheme.typography.titleMedium)
-            
-            // Ab list database se aayegi
-            if (appUsageList.isEmpty()) {
-                Text("No apps monitored yet. Start monitoring to see data.", 
-                     style = MaterialTheme.typography.bodyMedium)
+            // Antivirus Test
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Antivirus (VirusTotal)", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = {
+                        scope.launch {
+                            testResult = "Checking..."
+                            testResult = VirusTotalChecker.checkFileHash("44d88612fea8a8f36de82e1278abb02f")
+                        }
+                    }) { Text("Test VirusTotal") }
+                }
+            }
+
+            // Gemini Test
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Gemini AI Analysis", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = {
+                        scope.launch {
+                            testResult = "Analyzing..."
+                            testResult = GeminiAnalyzer.analyzeApp(
+                                "com.example.test",
+                                listOf("INTERNET", "SEND_SMS", "READ_CONTACTS")
+                            )
+                        }
+                    }) { Text("Test Gemini") }
+                }
+            }
+
+            // Test Result
+            if (testResult.isNotEmpty()) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Test Result:", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text(testResult, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+
+            // Usage Access Warning
+            if (!hasUsageAccess) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("⚠️ Usage Access Needed", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = {
+                            context.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        }) { Text("Open Settings") }
+                    }
+                }
+            }
+
+            // Activity Log
+            Text("Recent Activity", style = MaterialTheme.typography.titleMedium)
+            if (threatLogs.isEmpty()) {
+                Text("No activity yet", style = MaterialTheme.typography.bodySmall)
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(appUsageList) { app ->
+                LazyColumn(
+                    modifier = Modifier.height(150.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(threatLogs.take(5)) { log ->
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.padding(12.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(app.label, style = MaterialTheme.typography.bodyLarge)
-                                    Text("↓ ${app.rxBytes / 1024} KB  ↑ ${app.txBytes / 1024} KB", 
-                                         style = MaterialTheme.typography.labelSmall)
-                                }
-                                AssistChip(onClick = {}, label = { Text("Monitored") })
+                            Column(Modifier.padding(12.dp)) {
+                                Text(log.appLabel, style = MaterialTheme.typography.bodyLarge)
+                                Text(log.reason, style = MaterialTheme.typography.labelSmall)
                             }
+                        }
+                    }
+                }
+            }
+
+            // Monitored Apps
+            Text("Monitored Apps", style = MaterialTheme.typography.titleMedium)
+            LazyColumn(
+                modifier = Modifier.height(200.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(appUsageList.take(10)) { app ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(app.label, style = MaterialTheme.typography.bodyLarge)
+                                Text("↓ ${app.rxBytes / 1024} KB  ↑ ${app.txBytes / 1024} KB",
+                                    style = MaterialTheme.typography.labelSmall)
+                            }
+                            AssistChip(onClick = {}, label = { Text("Monitored") })
                         }
                     }
                 }
