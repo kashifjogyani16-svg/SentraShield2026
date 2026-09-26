@@ -14,6 +14,9 @@ public class MainActivity extends Activity {
     LinearLayout recentContainer;
     private static final int NOTIF_ID = 1001;
 
+    // 🔑 Apni Gemini API key yahan daalein
+    private static final String GEMINI_API_KEY = "YOUR_API_KEY_HERE";
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -25,14 +28,22 @@ public class MainActivity extends Activity {
         View ringView = findViewById(R.id.ringView);
         View cameraIcon = findViewById(R.id.cameraIcon);
 
+        // Status ke hisaab se emoji
         setEmoji("safe");
 
+        // Camera ring click (camera NA khule)
         ringView.setOnClickListener(v -> showDynamicIsland());
         cameraIcon.setOnClickListener(v -> showDynamicIsland());
 
+        // Recent apps list (scrolling)
         loadRecentApps();
+
+        // Notification (sirf ek baar)
         createNotificationChannel();
         sendNotification();
+
+        // ✅ Gemini 404 fix - v1beta + gemini-1.5-flash
+        callGemini();
     }
 
     private void setEmoji(String status) {
@@ -99,5 +110,33 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra("show_status", false)) {
             showDynamicIsland();
         }
+    }
+
+    // ✅ GEMINI API CALL (404 FIX)
+    private void callGemini() {
+        new Thread(() -> {
+            try {
+                java.net.URL url = new java.net.URL(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY);
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                String body = "{\"contents\":[{\"parts\":[{\"text\":\"Hello\"}]}]}";
+                conn.getOutputStream().write(body.getBytes());
+
+                int code = conn.getResponseCode();
+                runOnUiThread(() -> {
+                    if (code == 200) {
+                        statusText.setText("🟢 System Safe | Gemini: OK");
+                    } else {
+                        statusText.setText("⚠️ Gemini Error: " + code);
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> statusText.setText("Error: " + e.getMessage()));
+            }
+        }).start();
     }
 }

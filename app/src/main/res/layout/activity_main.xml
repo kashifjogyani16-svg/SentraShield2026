@@ -39,7 +39,8 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:layout_gravity="center"
-                android:src="@android:drawable/ic_menu_camera"/>
+                android:src="@android:drawable/ic_menu_camera"
+                android:tint="#00E5FF"/>
 
             <View
                 android:id="@+id/ringView"
