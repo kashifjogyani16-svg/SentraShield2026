@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">SentraShield</string>
+    <string name="app_subtitle">Network Shield &amp; Threat Monitor</string>
+
+    <string name="island_title_default">SentraShield</string>
+    <string name="island_subtitle_default">Monitoring active</string>
+
+    <string name="monitor_notification_title">SentraShield is active</string>
+    <string name="monitor_notification_text">Monitoring app network activity in the background</string>
+
+    <string name="start_monitoring">Start Monitoring</string>
+    <string name="stop_monitoring">Stop Monitoring</string>
+    <string name="grant_overlay_permission">Grant Overlay Permission</string>
 </resources>
